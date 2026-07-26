@@ -20,13 +20,12 @@ GRAMADS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NzQ5MyIsImp0aS
 SPONSOR_CHANNEL = None  # Например: "@my_channel" или None
 SPONSOR_LINK = "https://t.me/your_sponsor_channel"
 
-# Шаблон приветственного текста
+# Шаблон приветственного текста (Без YouTube Shorts)
 START_TEXT = (
     "Hello! 🎬 I can download videos without watermarks from:\n"
     "• TikTok\n"
     "• Instagram (Reels / Posts)\n"
-    "• Facebook\n"
-    "• YouTube Shorts\n\n"
+    "• Facebook\n\n"
     "Just send me a link to the video!"
 )
 
@@ -94,10 +93,9 @@ async def check_subscription(user_id: int) -> bool:
         logging.error(f"OP check skipped/error: {e}")
         return True
 
-# --- VIDEO DOWNLOAD ENGINE (ИСПРАВЛЕНО ДЛЯ YOUTUBE SHORTS) ---
+# --- VIDEO DOWNLOAD ENGINE ---
 def download_video_clean(url: str, output_path: str) -> str:
     ydl_opts = {
-        # Формат с приоритетом готового MP4 (чтобы не перегружать сервер склейкой)
         'format': 'best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
         'outtmpl': output_path,
         'quiet': True,
@@ -105,11 +103,6 @@ def download_video_clean(url: str, output_path: str) -> str:
         'concurrent_fragment_downloads': 1,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'extractor_args': {
-            'youtube': {
-                # Запрос через мобильные API/TV, чтобы обходить блок 403 и "Sign-in required"
-                'player_client': ['android', 'ios', 'mweb', 'tv_embedded'],
-                'skip': ['webpage', 'configs'],
-            },
             'tiktok': {
                 'app_version': '1.0.0',
             }
@@ -154,6 +147,11 @@ async def cmd_clear(message: types.Message):
 async def process_video_link(message: types.Message):
     user_id = message.from_user.id
     url = message.text.strip()
+
+    # Фильтр: если прислали ссылку на YouTube
+    if "youtube.com" in url.lower() or "youtu.be" in url.lower():
+        await message.answer("⚠️ YouTube downloads are disabled. Please send a link from TikTok, Instagram, or Facebook!")
+        return
 
     # 1. CHECK MANDATORY SUBSCRIPTION (OP)
     is_subscribed = await check_subscription(user_id)
