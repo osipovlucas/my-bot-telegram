@@ -94,15 +94,22 @@ async def check_subscription(user_id: int) -> bool:
         logging.error(f"OP check skipped/error: {e}")
         return True
 
-# --- VIDEO DOWNLOAD ENGINE ---
+# --- VIDEO DOWNLOAD ENGINE (ИСПРАВЛЕНО ДЛЯ YOUTUBE SHORTS) ---
 def download_video_clean(url: str, output_path: str) -> str:
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        # Формат с приоритетом готового MP4 (чтобы не перегружать сервер склейкой)
+        'format': 'best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
         'outtmpl': output_path,
         'quiet': True,
         'no_warnings': True,
         'concurrent_fragment_downloads': 1,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'extractor_args': {
+            'youtube': {
+                # Запрос через мобильные API/TV, чтобы обходить блок 403 и "Sign-in required"
+                'player_client': ['android', 'ios', 'mweb', 'tv_embedded'],
+                'skip': ['webpage', 'configs'],
+            },
             'tiktok': {
                 'app_version': '1.0.0',
             }
